@@ -67,6 +67,8 @@ library(ggthemes)
 library(rgdal)
 
 options(scipen=999)
+
+setwd("C:/Users/mwill/OneDrive - Harvard University/Work/SageConsulting/USDA_WLFW_NOBO")
 ```
 
 
@@ -78,11 +80,11 @@ options(scipen=999)
 ##Loading Boundaries
 State_Boundaries <- st_read("cb_2018_us_state_500k.kml", quiet = TRUE)
 State_Boundaries_GJSON <- st_read("US_State_Boundaries.json", quiet = TRUE)
-State_Boundaries_Zip <- st_read("C:/Users/sageg/Desktop/newRrepo/USDA_WLFW_NOBO/StateBoundariesZIP", quiet = T)
+State_Boundaries_Zip <- st_read("StateBoundariesZIP", quiet = T)
 
 
 #loading counties
-natl_priority_map<-readOGR("C:/Users/sageg/Desktop/NOBO_Boundary_Aug2021_Dissolve_ST_Draft", layer="NOBO_Boundary_Aug2021_Dissolve_ST_Draft")
+natl_priority_map<-readOGR("NOBO_Boundary_Aug2021_Dissolve_ST_Draft", layer="NOBO_Boundary_Aug2021_Dissolve_ST_Draft")
 
 
 ##Loading Goal Collection (GCT) Data
