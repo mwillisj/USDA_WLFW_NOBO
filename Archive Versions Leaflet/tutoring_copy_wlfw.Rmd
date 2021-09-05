@@ -1,0 +1,353 @@
+---
+title: "NOBO_GoalSetting"
+author: "Sage Grey"
+date: "6/23/2021"
+output: html_document
+---
+# NOBO interactive Map: GCT & Trend Data
+## This document creates a leaflet map showing goals collected as part of the Northern Bobwhite, Grasslands and Savannas National Partnership along side data collected showing NOBO trends collected by James Martin
+
+
+### Loading Libraries
+```{r setup, message=FALSE}
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(htmltools)
+library(htmlwidgets)
+library(raster)
+library(gstat)
+library(spatial)
+library(dplyr)
+library(jsonlite)
+library(ggplot2)
+library(hrbrthemes)
+library(ggthemes)
+library(rgdal)
+
+options(scipen=999)
+```
+
+
+
+### Loading Variable Sets
+
+```{r, message = FALSE}
+
+
+##Loading Boundaries
+State_Boundaries <- st_read("cb_2018_us_state_500k.kml", quiet = TRUE)
+State_Boundaries_GJSON <- st_read("US_State_Boundaries.json", quiet = TRUE)
+State_Boundaries_Zip <- st_read("C:/Users/sageg/Desktop/newRrepo/USDA_WLFW_NOBO/StateBoundariesZIP", quiet = T)
+
+
+#loading counties
+natl_priority_map<-readOGR("C:/Users/sageg/Desktop/NOBO_Boundary_Aug2021_Dissolve_ST_Draft", layer="NOBO_Boundary_Aug2021_Dissolve_ST_Draft")
+
+
+
+##Loading GCT Data
+GCT_data <- read_csv("NOBODATA_ForLeaflet_Final.csv")
+
+##Loading RDS
+bird_data <- readRDS("NOBO_route_level_trends.rds")
+
+
+##Loading RDS
+bird_data <- readRDS("NOBO_route_level_trends.rds")
+
+bird_data<-as(bird_data, "Spatial")  #this converts the object, bird_data, into a SpatialPointsDataFrame
+
+
+
+
+
+
+# proj4string(bird_data)<-"+proj=laea +lat_0=40 +lon_0=-95 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"  ## if proj4string() is NA, you can define a projection.  IT HAS TO BE THE PROJECTION THAT IT WAS SUPPOSED TO HAVE ORIGINALLY
+
+## convert the projection
+bird_dat<-spTransform(bird_data, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+
+
+transf_natl_PA <- spTransform(natl_priority_map, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+
+```
+
+
+
+
+
+### Adding Geometries to GCT Data
+
+```{r, message = FALSE}
+
+##Joining Boundaries and GCT Data
+GCT_and_Geographies <- st_as_sf(left_join(GCT_data, State_Boundaries_Zip, by =c("STATE" ="NAME")))
+
+ 
+```
+
+
+### Creating Label for GCT Data
+
+```{r, message=FALSE}
+
+## Creating Label for States
+GCT_and_Geographies$label <- 
+  paste("<b>", "<big>", GCT_and_Geographies$STATE,"</b>", "</big>",
+       "<br>", GCT_and_Geographies$REGION,
+        "<br>", "Values shown below reflect the combined value of", "<br>", "Original Program Goals and Framework Goals",
+       "<br>",
+        "<br>",
+        "<b> Top 3 Core Conservation Practices: </b>",
+       "<br>",
+        GCT_and_Geographies$TOP3CORE,
+        "<br>",
+       "<br>",
+        "<b>", "Financial Assistance:", "</b>","<br>",
+        "$ ", prettyNum(GCT_and_Geographies$REQFIN_FRAME,big.mark=","),
+       "<br>",
+        "<br>",  "<b>", "Total CP Coverage, Acres:", "</b>",
+        "<br>", "Core:", prettyNum(GCT_and_Geographies$ACRE_FRAME_CORE, big.mark = ","),
+        "<br>", "Supplemental:", prettyNum(GCT_and_Geographies$ACRE_FRAME_SUPP, big.mark = ","),
+        "<br>", "Core and Supp Combined:", prettyNum(GCT_and_Geographies$ACRE_FRAME_CAS, big.mark = ","),
+       "<br>",
+        "<br>", "<b>", "Total CP Coverage, Feet:", "</b>",
+        "<br>", "Core:", prettyNum(GCT_and_Geographies$FT_FRAME_CORE, big.mark = ","),
+        "<br>", "Supplemental:", prettyNum(GCT_and_Geographies$FT_FRAME_SUPP, big.mark = ","),
+        "<br>", "Core and Supp Combined:", GCT_and_Geographies$FT_FRAME_CAS,
+       "<br>",
+        "<br>", "<b>", "Total CP Coverage, Number of X:", "</b>",
+        "<br>",GCT_and_Geographies$X_FRAME,
+       "<br>",
+        "<br>", "<b>", "Number of Written Plans:", "</b>",
+        "<br>",GCT_and_Geographies$WRITTEN_FRAME,
+       "<br>",
+        "<br>", "<b>", "Number of Applied Plans:", "</b>",
+        "<br>",GCT_and_Geographies$APPLIED_FRAME) %>% 
+  lapply(htmltools::HTML)
+
+
+
+# Creating Label for NOBO Trend Data
+bird_dat$label <- 
+  paste("NOBO Trend Data","<br>", "Abundance:", round(bird_dat$abund, digits=3),"<br>","Trend:", round(bird_dat$trend, digits=3),"</b>")%>%
+  lapply(htmltools::HTML)
+
+```
+
+
+## Leaflet Map in Development
+
+```{r, message = FALSE}
+
+# create color coded dots
+
+bins <- seq(min(bird_dat$trend),
+             max(bird_dat$trend), by = .25)
+# colramp<-colorRampPalette(c("red", "yellow", "blue"))
+# cols<-colramp(length(bins))
+
+pal <- colorNumeric("magma", 
+                    domain = bins,
+                    na.color = "#00000000")
+
+scale_fill_brewer(palette="RdYlGn")
+
+# setup Leaflet
+leaflet(options=leafletOptions(minZoom = 4)) %>%
+  addProviderTiles(providers$Stamen.Terrain) %>%
+  addProviderTiles("Esri.WorldImagery", group="Aerial") %>% 
+  
+#create layer toggle  
+  addLayersControl(
+    baseGroups = c("Map", "Aerial"),
+    overlayGroups = c("Points", "States", "Priority Counties"), 
+    position = "topleft"
+  ) %>% 
+ 
+  #Add State Data 
+  addPolygons(data=GCT_and_Geographies,
+    highlightOptions = highlightOptions(fillOpacity = 1, fillColor="cornsilk"),
+              weight=1, 
+              fillColor= "orange",
+              color = "black",
+              fillOpacity=.5,
+              label = paste0(GCT_and_Geographies$STATE, " - ", GCT_and_Geographies$REGION), 
+              popup=~label,
+              group="States",
+              labelOptions = labelOptions(
+                style = list("font-weight" = "normal", padding = "3px 8px"),
+                textsize = "11px",
+                direction = "auto")) %>% 
+  
+  # Add NOBO trend Data
+  addCircles(data=bird_dat, 
+             color = ~pal(trend), 
+            # size=bird_dat$abund,
+             opacity=0.8,# fillOpacity = 0.6,
+             label=paste0("Trend: 2002-2019: ", round(bird_dat$trend,digits=3)), 
+             popup=~label, 
+             group="Points") %>%
+  
+    addPolygons(data=transf_natl_PA, 
+             # popup= GCT_and_Geographies$label[GCT_and_Geographies$STATE==indiana_priority_map$State],
+             # color=priority$color, fillOpacity=0.8,
+              #label=priority$Priority,
+              color="Black",
+             fillColor = "red", 
+             opacity = .5,
+             weight =1,
+              group="Priority Counties")%>%
+  
+  #set Max Bounds
+  setMaxBounds(lng1=-100.791110603, 
+               lat1= 20,
+               lng2= -66.96466,
+               lat2= 71.3577635769)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Setting up Leaflet with only GCT Data
+```{r, message=FALSE}
+nobo_summary_leaflet <- leaflet(GCT_and_Geographies)%>%
+  addProviderTiles(providers$Stamen.Watercolor) %>%
+  addPolygons(highlightOptions = highlightOptions(fillOpacity = 1, fillColor="cornsilk"),
+              weight=1, 
+              fillColor= "darkseagreen",
+              color = "black",
+              fillOpacity=.5,
+              label = ~GCT_and_Geographies$label, 
+              labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "11px",
+    direction = "auto")) %>%
+  
+    addControl("Northern Bobwhite, Grasslands, and Savannas National Partnership 2022-2026: Framework Goal Summary", position = "topright")
+
+nobo_summary_leaflet 
+
+saveWidget(nobo_summary_leaflet, file="NOBO_SUMMARY_LEAFLET.html")
+
+```
+
+### leaflet with both GCT and Trend Data
+```{r, message=FALSE}
+
+## Setting up LEaflet 
+nobo_summary_leaflet <- leaflet()%>%
+  addProviderTiles(providers$Stamen.Watercolor) %>%
+  addPolygons(data=GCT_and_Geographies, 
+              highlightOptions = highlightOptions(fillOpacity = 1, fillColor="cornsilk"),
+              weight=1, 
+              fillColor= "darkseagreen",
+              color = "black",
+              fillOpacity=.5,
+              label = ~GCT_and_Geographies$label, 
+              labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "11px",
+    direction = "auto")) %>%
+  
+  ## Add lci-data
+  addCircles(data=separated_coord_bird_data,
+            lng = ~long, 
+            lat = ~lat)%>%
+  
+    addControl("Northern Bobwhite, Grasslands, and Savannas National Partnership 2022-2026: Framework Goal Summary", position = "topright")
+
+nobo_summary_leaflet 
+
+#saveWidget(nobo_summary_leaflet, file="NOBO_SUMMARY_LEAFLET.html")
+
+
+```
+
+
+
+
+
+
+### Showing BirdData as GGPLOT and Leaflet
+```{r, message=FALSE}
+
+## ggplot
+ggplot(bird_data, aes(color=lci_trend)) +
+  geom_sf()
+
+## leaflet
+
+leaflet(separated_coord_bird_data) %>%
+addProviderTiles("CartoDB.Positron") %>%
+  addCircles(lng = ~long, 
+            lat = ~lat, 
+            color ="red")
+  
+
+```
+
+
+
+
+
+
+
+
+
+

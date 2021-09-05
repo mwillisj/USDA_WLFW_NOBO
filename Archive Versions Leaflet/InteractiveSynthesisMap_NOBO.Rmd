@@ -1,0 +1,224 @@
+---
+title: "NOBO_GoalSetting"
+author: "Sage Grey"
+date: "6/23/2021"
+output: html_document
+---
+
+
+Loading Libraries
+```{r setup, message=FALSE}
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(htmltools)
+library(htmlwidgets)
+library(raster)
+library(gstat)
+library(spatial)
+library(dplyr)
+library(jsonlite)
+library(ggplot2)
+library(hrbrthemes)
+library(ggthemes)
+
+library("writexl")
+library(shiny)
+
+options(scipen=999)
+```
+
+
+Loading Variable Sets
+
+```{r message = FALSE}
+
+
+##Loading Boundaries
+State_Boundaries <- st_read("cb_2018_us_state_500k.kml", quiet = TRUE)
+State_Boundaries_GJSON <- st_read("US_State_Boundaries.json", quiet = TRUE)
+State_Boundaries_Zip <- st_read("C:/Users/sageg/Desktop/newRrepo/USDA_WLFW_NOBO/StateBoundariesZIP", quiet = T)
+
+
+
+##Loading GCT Data
+GCT_data <- read_csv("NOBODATA_ForLeaflet_Final.csv")
+
+##Loading RDS
+bird_data <- readRDS("NOBO_route_level_trends.rds")
+
+#GCT_data_all <-read_csv("GCT_DATAONLY.csv")
+
+#NOBO_Data<- read_csv("GCT_DATASET_NOBO_GSP.csv")
+
+```
+
+```{r}
+
+
+separated_coord <- bird_data %>%
+    mutate(lat = unlist(map(bird_data$geometry,1)),
+           long = unlist(map(bird_data$geometry,2)))
+
+separated_coord
+```
+
+
+
+
+Mutating Variables/DataSets
+
+```{r}
+
+##Joining Boundaries and GCT Data
+GCT_and_Geographies <- st_as_sf(left_join(GCT_data, State_Boundaries_Zip, by =c("STATE" ="NAME")))
+
+
+ 
+```
+
+```{r}
+ggplot(bird_data, aes(color=lci_trend)) +
+  geom_sf()
+
+leaflet(data=separated_coord) %>%
+addTiles() %>%
+  addAwesomeMarkers(~lat, ~long, popup = ~as.character(trend), label = ~as.character(trend)) 
+
+
+
+  
+
+```
+
+
+
+
+
+
+```{r message=FALSE}
+
+
+#GCT_and_Geographies_Geometries <-st_as_sf(GCT_and_Geographies)
+
+##Setting up Leaflet
+
+## Creating Label
+GCT_and_Geographies$label <- 
+  paste("<b>", "<big>", GCT_and_Geographies$STATE,"</b>", "</big>",
+       "<br>", GCT_and_Geographies$REGION,
+        "<br>", "Values shown below reflect the combined value of", "<br>", "Original Program Goals and Framework Goals",
+       "<br>",
+        "<br>",
+        "<b> Top 3 Core Conservation Practices: </b>",
+       "<br>",
+        GCT_and_Geographies$TOP3CORE,
+        "<br>",
+       "<br>",
+        "<b>", "Financial Assistance:", "</b>","<br>",
+        "$ ", prettyNum(GCT_and_Geographies$REQFIN_FRAME,big.mark=","),
+       "<br>",
+        "<br>",  "<b>", "Total CP Coverage, Acres:", "</b>",
+        "<br>", "Core:", prettyNum(GCT_and_Geographies$ACRE_FRAME_CORE, big.mark = ","),
+        "<br>", "Supplemental:", prettyNum(GCT_and_Geographies$ACRE_FRAME_SUPP, big.mark = ","),
+        "<br>", "Core and Supp Combined:", prettyNum(GCT_and_Geographies$ACRE_FRAME_CAS, big.mark = ","),
+       "<br>",
+        "<br>", "<b>", "Total CP Coverage, Feet:", "</b>",
+        "<br>", "Core:", prettyNum(GCT_and_Geographies$FT_FRAME_CORE, big.mark = ","),
+        "<br>", "Supplemental:", prettyNum(GCT_and_Geographies$FT_FRAME_SUPP, big.mark = ","),
+        "<br>", "Core and Supp Combined:", GCT_and_Geographies$FT_FRAME_CAS,
+       "<br>",
+        "<br>", "<b>", "Total CP Coverage, Number of X:", "</b>",
+        "<br>",GCT_and_Geographies$X_FRAME,
+       "<br>",
+        "<br>", "<b>", "Number of Written Plans:", "</b>",
+        "<br>",GCT_and_Geographies$WRITTEN_FRAME,
+       "<br>",
+        "<br>", "<b>", "Number of Applied Plans:", "</b>",
+        "<br>",GCT_and_Geographies$APPLIED_FRAME) %>% 
+  lapply(htmltools::HTML)
+
+
+nobo_summary_leaflet <- leaflet(GCT_and_Geographies)%>%
+  addProviderTiles(providers$Stamen.Watercolor) %>%
+  addPolygons(highlightOptions = highlightOptions(fillOpacity = 1, fillColor="cornsilk"),
+              weight=1, 
+              fillColor= "darkseagreen",
+              color = "black",
+              fillOpacity=.5,
+              label = ~GCT_and_Geographies$label, 
+              labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "11px",
+    direction = "auto")) %>%
+  
+    addControl("Northern Bobwhite, Grasslands, and Savannas National Partnership 2022-2026: Framework Goal Summary", position = "topright")
+
+nobo_summary_leaflet 
+
+saveWidget(nobo_summary_leaflet, file="NOBO_SUMMARY_LEAFLET.html")
+
+
+```
+FRAMEWORK GOALS
+```{r}
+nobo_map <- ggplot(GCT_and_Geographies, aes(fill=GCT_and_Geographies$REQFIN_FRAME)) +
+  geom_sf()+
+   scale_fill_viridis_c(
+    name = "Framework Goals: \nRequested Financial Assistance ($)",
+    breaks = seq(0, 300000000, by = 50000000),
+    labels = formatC(seq(0, 300000000, by = 50000000), 
+                     big.mark = ",", format = "f", digits = 0)) +
+    theme_classic() + 
+  ggplot(bird_data, aes(color=lci_trend)) +
+  geom_sf()
+
+nobo_map
+```
+
+
+```{r}
+leaflet(GCT_and_Geographies)%>%
+  addProviderTiles(providers$Stamen.Watercolor) %>%
+  addPolygons(highlightOptions = highlightOptions(fillOpacity = 1, fillColor="cornsilk"),
+              weight=1, 
+              fillColor= "darkseagreen",
+              color = "black",
+              fillOpacity=.5,
+              label = ~GCT_and_Geographies$label, 
+              labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "9px",
+    direction = "auto")) 
+```
+
+```{r}
+write_xlsx(GCT_and_Geographies,"C:/Users/sageg/Desktop/newRrepo/USDA_WLFW_NOBO/GCT_and_Geographies.xlsx")
+
+```
+
+
+```{r, message=FALSE}
+# Plot
+
+ggplot(GCT_data, aes(x=State, y=TOTALACRES_FRAMEWORKGOALS)) +
+  geom_point( size=5, color="red", fill=alpha("orange", 0.3), alpha=0.7, shape=21, stroke=2) + 
+  geom_segment(aes(x=State, 
+                   xend=State, 
+                   y=0, 
+                   yend=TOTALACRES_FRAMEWORKGOALS)) + 
+  labs(title="Whats Your Drive?", 
+       subtitle="Commute Time Versus Age", 
+       caption="source: ACS1")+ 
+  
+  scale_x_discrete(name="State") +
+
+  scale_y_continuous("Acre Coveragel", 
+                     breaks = seq(0,20000000, by = 250000),
+                     labels = paste(seq(0,20000000, by = 250000),
+                     "millions", sep = "")) +
+  theme(axis.text.x = element_text(angle = 90))+
+  theme_classic()
+```
+
+
