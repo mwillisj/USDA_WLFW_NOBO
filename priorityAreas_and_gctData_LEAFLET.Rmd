@@ -27,7 +27,7 @@ a. Look at charts/figures in "Figures for NOBO Report" as model.
 b. Create "clues/helper text" for interpreting map.(ie, indication of what the priority areas are vs the state boundaries) 
 
 HEX CODES:
-YEllow: f0ce63
+Yellow: f0ce63
 Orange: f57943
 Blue: a1d5d1
 Green: bfbb60
@@ -86,7 +86,7 @@ State_Boundaries_Zip <- st_read("StateBoundariesZIP", quiet = T)
 
 
 #loading counties
-#natl_priority_map<-readOGR("NOBO_Boundary_Aug2021_Dissolve_ST_Draft", layer="NOBO_Boundary_Aug2021_Dissolve_ST_Draft")
+natl_priority_map<-readOGR("NOBO_Boundary_Aug2021_Dissolve_ST_Draft", layer="NOBO_Boundary_Aug2021_Dissolve_ST_Draft")
 
 
 ##Loading Goal Collection (GCT) Data
@@ -104,7 +104,7 @@ bird_data<-as(bird_data, "Spatial")  #this converts the object, bird_data, into 
 bird_dat<-spTransform(bird_data, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
 
 
-#transf_natl_PA <- spTransform(natl_priority_map, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+transf_natl_PA <- spTransform(natl_priority_map, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
 
 ##Joining Boundaries and GCT Data
 GCT_and_Geographies <- st_as_sf(left_join(GCT_data, State_Boundaries_Zip, by =c("STATE" ="NAME")))
@@ -162,8 +162,6 @@ bird_dat$label <-
   paste("NOBO Trend Data","<br>", "Abundance:", round(bird_dat$abund, digits=3),"<br>","Trend:", round(bird_dat$trend, digits=3),"</b>")%>%
   lapply(htmltools::HTML)
 
-bird_data2 <- st_as_sf(bird_dat)
-typeof(bird_data2)
 ```
 
 
@@ -196,9 +194,18 @@ symbols_abund <- makeSizeIcons(
   pal = numPal, colorValues = bird_dat$trend,
   values = bird_dat$abund,
   shape = "circle",
-  opacity = 1,
+  opacity = .8,
   baseSize = 1.5
 )
+
+ggplot(st_as_sf(transf_natl_PA)) +
+  geom_sf()
+
+
+#Hatching priority areas
+priority.hatch <- HatchedPolygons::hatched.SpatialPolygons(natl_priority_map, 
+                                                           density = c(6,4),
+                                                           angle = c(45, 135))
 
 #scale_fill_brewer(palette="RdYlGn")
 
@@ -218,7 +225,7 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
   addPolygons(data=GCT_and_Geographies,
     highlightOptions = highlightOptions(fillColor="green", fillOpacity=.3),
               weight=1, 
-              fillColor= "blanchedalmond",
+              fillColor= "#34252f",
               color = "black",
               fillOpacity=.3,
               label = paste0(GCT_and_Geographies$STATE, " - ", GCT_and_Geographies$REGION), 
@@ -246,15 +253,20 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
              popup=~label, 
              group="Points") %>%
   
- #   addPolygons(data=transf_natl_PA, 
+    addPolygons(data=transf_natl_PA, 
              # popup= GCT_and_Geographies$label[GCT_and_Geographies$STATE==indiana_priority_map$State],
              # color=priority$color, fillOpacity=0.8,
               #label=priority$Priority,
-  #            color="Black",
-   #          fillColor = "mediumpurple2", 
-    #         opacity = .9,
-     #        weight =1,
-      #        group="Priority Counties")%>%
+              color="Black",
+             fillColor = "mediumpurple2", 
+             opacity = .9,
+             weight =1,
+              group="Priority Counties")%>%
+  addPolylines(
+    data = priority.hatch,
+    color = c("white", "red"),
+    weight = 1
+  ) %>%
   
   #set Max Bounds
   setMaxBounds(lng1=-140.791110603, 
@@ -262,9 +274,9 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
                lng2= -40.96466,
                lat2= 81.3577635769) %>% 
   
-addLegendNumeric("Trend\n2002-2019", pal= numPal, 
-          values=c(-4,-3,-2,-1,0,1,2,3,4), decreasing = T,
-          orientation = "vertical") %>%
+addLegend(title = paste("Trend 2002-2019<br>(% change/yr)"), 
+                 pal= numPal,
+                 values=c(-4,-3,-2,-1,0,1,2,3,4)) %>%
 
 addLegendSize(values = bird_dat$abund,
               color = "black",
