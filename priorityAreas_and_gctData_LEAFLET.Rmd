@@ -232,7 +232,6 @@ priority_areas
 
 ## transform to enable addition of hatches to leaflet
 
-
 makePlotURI <- function(expr, width, height, ...) {
   pngFile <- plotPNG(function() { expr }, width = width, height = height, ...)
   on.exit(unlink(pngFile))
@@ -240,6 +239,9 @@ makePlotURI <- function(expr, width, height, ...) {
   base64 <- httpuv::rawToBase64(readBin(pngFile, raw(1), file.size(pngFile)))
   paste0("data:image/png;base64,", base64)
 }
+
+
+
 
 plot1 <- makePlotURI({
   print(ggplot(natl_PA %>% filter(priority_area == 1), aes(map_id = region)) +
@@ -269,6 +271,8 @@ df <- data.frame(
   stringsAsFactors = FALSE
 )
 
+df <- data.frame(priority_areas)
+
 leaflet(df) %>% addTiles() %>%
   addMarkers(icon = ~icons(plots))
 
@@ -288,7 +292,7 @@ bins_trend <- seq(min(bird_dat$trend),
 
 #binPal <- colorBin("viridis", domain = bins_trend)
   
-numPal <- colorNumeric(brewer.pal(11, "Spectral"), bird_dat$trend)
+numPal <- colorNumeric(brewer.pal(11, "RdYlGn"), bird_dat$trend)
 
 #pal <-  colorNumeric(c("firebrick1","limegreen"), 
  #                   domain = bins_trend,
@@ -301,11 +305,11 @@ bins_abund <- seq(min(bird_dat$abund),
 
 
 symbols_abund <- makeSizeIcons(
-  pal = numPal, colorValues = bird_dat$trend,
+  pal = numPal, colorValues = bird_dat$trend, color = "black", strokeWidth = .15,
   values = bird_dat$abund,
   shape = "circle",
   opacity = .8,
-  baseSize = 1.5
+  baseSize = 2
 )
 
 
@@ -315,25 +319,26 @@ symbols_abund <- makeSizeIcons(
 
 # setup Leaflet
 nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
-  addProviderTiles(providers$CartoDB.Positron) %>%
   addProviderTiles("Esri.WorldImagery", group="Aerial") %>% 
+  addProviderTiles(providers$Stamen, group = "Map") %>%
   
-  addTiles(priority_areas) %>%
+ # addTiles(priority_areas[["plot_env"]][["priority_areas"]][["layers"]][[1]]) %>%
   
 #create layer toggle  
   addLayersControl(
-    baseGroups = c("Map", "Aerial"),
+    baseGroups = c("Aerial", "Map"),
     overlayGroups = c("Points", "States", "Priority Counties"), 
-    position = "topleft"
+    position = "topleft", 
+    options = layersControlOptions(collapsed = F)
   ) %>% 
  
   #Add State Data 
   addPolygons(data=GCT_and_Geographies,
     highlightOptions = highlightOptions(fillColor="green", fillOpacity=.3),
               weight=1, 
-              fillColor= "#34252f",
+              fillColor= "white",
               color = "black",
-              fillOpacity=.3,
+              fillOpacity=.05,
               label = paste0(GCT_and_Geographies$STATE, " - ", GCT_and_Geographies$REGION), 
               popup=~label,
               group="States",
@@ -345,8 +350,8 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
   addMarkers(data = bird_dat,
              icon = symbols_abund,
              label=paste("2002-2019:","Trend:", 
-                         round(bird_dat$trend,digits=3),", Abundance: ", 
-                         round(bird_dat$abund)), 
+                         round(bird_dat$trend,digits=2),"%, Abundance: ", 
+                         round(bird_dat$abund), sep = ""), 
              popup=~label, 
              group="Points") %>%
   
@@ -366,9 +371,12 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
                lng2= -40.96466,
                lat2= 81.3577635769) %>% 
   
-addLegend(title = paste("Trend 2002-2019<br>(% change/yr)"), 
-                 pal= numPal,
-                 values=c(-4,-3,-2,-1,0,1,2,3,4)) %>%
+addLegend(title = paste("Trend 2002-2019<br>(Avg Annual Change)"), 
+          colors = brewer.pal(9, "RdYlGn"),
+              #   pal= numPal,
+               #  values=c(-4,-3,-2,-1,0,1,2,3,4), 
+                 labels = c("4 Percent Decrease","","","",
+                            "No Change","","","","4 Percent Increase")) %>%
 
 addLegendSize(values = bird_dat$abund,
               color = "black",
@@ -383,12 +391,10 @@ nobo_and_gct_leaflet
 
 
 
-
 saveWidget(nobo_and_gct_leaflet, file="GCT_and_TrendNOBO.html")
   
+brewer.pal.info
 
-
-                    
 
 ```
 
