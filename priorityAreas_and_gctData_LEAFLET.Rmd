@@ -341,7 +341,7 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
               fillColor= "white",
               color = "black",
               fillOpacity=.05,
-              label = paste0(GCT_and_Geographies$STATE, " - ", GCT_and_Geographies$REGION), 
+              popup = paste0(GCT_and_Geographies$STATE, " - ", GCT_and_Geographies$REGION), 
             #  popup=~label,
               group="States",
               labelOptions = labelOptions(
@@ -360,10 +360,11 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
     addPolygons(data=transf_natl_PA, 
              # popup= GCT_and_Geographies$label[GCT_and_Geographies$STATE==indiana_priority_map$State],
              # color=priority$color, fillOpacity=0.8,
-              label=priority$Priority,
+            #  label=priority$Priority,
               color="Black",
              fillColor = "mediumpurple2", 
-             opacity = .8,
+            highlightOptions = highlightOptions(fillColor = "red", fillOpacity = .7),
+             opacity = .5,
              weight =1,
               group="Priority Counties")%>%
 
