@@ -138,7 +138,7 @@ colnames(state_abbr) <- c("state","state_name")
 ## Creating Label for States
 GCT_and_Geographies$label <- 
   paste("<b>", "<big>", GCT_and_Geographies$STATE,"</b>", "</big>",
-       "<br>", GCT_and_Geographies$REGION,
+       "<br><i>", GCT_and_Geographies$REGION, "</i>",
         "<br>", "Values shown below reflect the combined value of", "<br>", "Original Program Goals and Framework Goals",
        "<br>",
         "<br>",
