@@ -142,31 +142,31 @@ GCT_and_Geographies$label <-
         "<br>", "Values shown below reflect the combined value of", "<br>", "Original Program Goals and Framework Goals",
        "<br>",
         "<br>",
-        "<b> Top 3 Core Conservation Practices: </b>",
+        "<b style='font-size:90%'> Top 3 Core Conservation Practices: </b>",
        "<br>",
         GCT_and_Geographies$TOP3CORE,
         "<br>",
        "<br>",
-        "<b>", "Financial Assistance:", "</b>","<br>",
+        "<b style='font-size:90%'>", "Financial Assistance:", "</b>","<br>",
         "$ ", prettyNum(GCT_and_Geographies$REQFIN_FRAME,big.mark=","),
        "<br>",
-        "<br>",  "<b>", "Total CP Coverage, Acres:", "</b>",
+        "<br>",  "<b style='font-size:90%'>", "Total CP Coverage, Acres:", "</b>",
         "<br>", "Core:", prettyNum(GCT_and_Geographies$ACRE_FRAME_CORE, big.mark = ","),
         "<br>", "Supplemental:", prettyNum(GCT_and_Geographies$ACRE_FRAME_SUPP, big.mark = ","),
         "<br>", "Core and Supp Combined:", prettyNum(GCT_and_Geographies$ACRE_FRAME_CAS, big.mark = ","),
        "<br>",
-        "<br>", "<b>", "Total CP Coverage, Feet:", "</b>",
+        "<br>", "<b style='font-size:90%'>", "Total CP Coverage, Feet:", "</b>",
         "<br>", "Core:", prettyNum(GCT_and_Geographies$FT_FRAME_CORE, big.mark = ","),
         "<br>", "Supplemental:", prettyNum(GCT_and_Geographies$FT_FRAME_SUPP, big.mark = ","),
         "<br>", "Core and Supp Combined:", GCT_and_Geographies$FT_FRAME_CAS,
        "<br>",
-        "<br>", "<b>", "Total CP Coverage, Number of X:", "</b>",
+        "<br>", "<b style='font-size:90%'>", "Total CP Coverage, Number of X:", "</b>",
         "<br>",GCT_and_Geographies$X_FRAME,
        "<br>",
-        "<br>", "<b>", "Number of Written Plans:", "</b>",
+        "<br>", "<b style='font-size:90%'>", "Number of Written Plans:", "</b>",
         "<br>",GCT_and_Geographies$WRITTEN_FRAME,
        "<br>",
-        "<br>", "<b>", "Number of Applied Plans:", "</b>",
+        "<br>", "<b style='font-size:90%'>", "Number of Applied Plans:", "</b>",
         "<br>",GCT_and_Geographies$APPLIED_FRAME) %>% 
   lapply(htmltools::HTML)
 
@@ -329,7 +329,7 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
     baseGroups = c("Aerial", "Map"),
     overlayGroups = c("Points", "States", "Priority Counties"), 
     position = "topleft", 
-    options = layersControlOptions(collapsed = F)
+    options = layersControlOptions(collapsed = T)
   ) %>% 
  
   #Add State Data 
@@ -376,7 +376,8 @@ addLegend(title = paste("Trend 2002-2019<br>(Avg Annual Change)"),
               #   pal= numPal,
                #  values=c(-4,-3,-2,-1,0,1,2,3,4), 
                  labels = c("4 Percent Decrease","","","",
-                            "No Change","","","","4 Percent Increase")) %>%
+                            "No Change","","","","4 Percent Increase"), 
+          position = "topright") %>%
 
 addLegendSize(values = bird_dat$abund,
               color = "black",

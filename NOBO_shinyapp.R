@@ -1,25 +1,24 @@
 library(shiny)
 library(leaflet)
 library(leaflet.extras)
-library(qdapTools)
 
 ui <- fluidPage(
   mainPanel(
     leafletOutput("map",
-                  height = 600,
+                  height = 400,
                   width = '100%')),
-  absolutePanel(
-    id = "controls",
-    top = 40, left = 40
-  ),
+  # absolutePanel(
+  #   id = "controls",
+  #   top = 40, left = 40
+  # ),
   sidebarPanel(
     selectInput("state", label = h3("Select State"), 
                 choices = GCT_and_Geographies$STATE),
-    hr(),
     htmlOutput("goals")
     
   )
 )
+
 
 
 server <- function(input, output, session) {
@@ -27,7 +26,11 @@ server <- function(input, output, session) {
     x <- paste0(GCT_and_Geographies %>%
                   as.data.frame() %>%
                   filter(STATE == {input$state}) %>%
-                  subset(select = "label"))
+                  subset(select = "label") %>%
+                  substr(7, nchar(GCT_and_Geographies %>%
+                                    as.data.frame() %>%
+                                    filter(STATE == {input$state}) %>%
+                                    subset(select = "label")) - 2))
     HTML(x)
     })
     output$map <- renderLeaflet({
@@ -36,7 +39,6 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-
 
 
 
