@@ -28,6 +28,12 @@ bird_df <- bird_data %>%
                                       "OH",
                                       "WV"), "Northeast", "Southeast")))
 
+gct_columns <- as.data.frame(colnames(GCT_and_Geographies))
+gct_columns
+
+GCT_and_Geographies_clean <- GCT_and_Geographies %>%
+  mutate()
+
 # Functions -------------------
 
 ## Plots -----
@@ -42,17 +48,21 @@ depth_plot <- function(var_x, var_y, var_z = "REGION") {
     coord_flip() +
     # labs(x = "", y = y_axis_lab, subtitle = subtitle) +
     theme(
-      legend.position = "bottom",
+      legend.position = "bottom", 
       axis.title = element_text(size = 16),
       axis.text.x = element_text(family = "Trebuchet MS", size = 12),
       panel.grid = element_blank())
 }
 
 state_plot <- function(var_x, var_y, var_z = "REGION") {
-  ggplot(GCT_and_Geographies) +
-    geom_col(aes(.data[[var_x]], .data[[var_y]], fill = .data[[var_z]]))
+  ggplot(GCT_and_Geographies) + 
+    geom_col(aes(x = reorder(.data[[var_x]], 
+                             -as.numeric(as.character(.data[[var_y]]))), 
+                 y = as.numeric(as.character(.data[[var_y]])), 
+                 fill = .data[[var_z]]))
 }
 
+state_plot("STATE", "ACRE_PRO_SUPP")
 
 
 # create leaflet -------------
@@ -116,14 +126,6 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
                 textsize = "11px",
                 direction = "auto")) %>% 
   
-  # addMarkers(data = bird_dat,
-  #            icon = symbols_size(basesize = 2),
-  #            label=paste("2002-2019:","Trend:",
-  #                        round(bird_dat$trend,digits=2),"%, Abundance: ",
-  #                        round(bird_dat$abund), sep = ""),
-  #            popup=~label,
-  #            group="Points") %>%
-  
   addPolygons(data=transf_natl_PA, 
               color="Black",
               fillColor = "mediumpurple2", 
@@ -137,16 +139,6 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
                lat1= 10,
                lng2= -40.96466,
                lat2= 81.3577635769)
-  
-  
-  # addLegendSize(values = bird_dat$abund,
-  #               color = "black",
-  #               fillColor = "black",
-  #               title = "Abundance",
-  #               orientation = "vertical",
-  #               baseSize = 1.5,
-  #               shape = "circle")
-
 
 
 # Shiny App ----------------------------
