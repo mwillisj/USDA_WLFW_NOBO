@@ -181,102 +181,102 @@ bird_dat$label <-
 
 
 ## Create Hatches for Priority Areas
-```{r, message = F}
-#Hatching priority areas
-#priority.hatch <- hatched.SpatialPolygons(natl_priority_map,
- #                                         density = 6)
-  #                                        angle = c(45, 135))
-
-#test <- natl_priority_map %>%
- # subset(STATE %in% "FL")
-
-#test2 <- hatched.SpatialPolygons(test)
-
-
-natl_PA_raster <- st_rasterize(plot(st_as_sf(transf_natl_PA), density = 30))
-
-
-natl_PA_m <- reshape2::melt(natl_PA, id = 1)
-
-natl_PA_map <- st_as_sf(transf_natl_PA)
-
-states_map <- map_data("state") %>%
-  left_join(state_abbr, by = c("region" = "state_name")) 
-
-natl_PA <- data.frame(transf_natl_PA) %>%
-  mutate(state = tolower(STATE),
-         priority_area = 1) %>%
-  right_join(states_map, by = "state") %>%
-  mutate(priority_area = ifelse(
-    priority_area == 1, 1, 0
-  ))
-
-##creating hatches for priority areas
-priority_areas <- 
-  ggplot(natl_PA %>% filter(priority_area == 1), aes(map_id = region)) +
-  geom_map_pattern(
-    map = states_map,
-    aes(pattern_type = priority_area),
-    pattern = 'magick',
-    pattern_fill = 'black',
-    pattern_aspect_ratio = 1.75,
-    fill = 'white',
-    color = 'black', show.legend = F) +
-  coord_map() +
-    expand_limits(x = states_map$long, y = states_map$lat) +
- scale_pattern_type_continuous(choices = c("right30", NA)) +
-  theme_map() +
-  theme(plot.background = element_rect(fill = NA, color = NA))
-
-priority_areas
-
-## transform to enable addition of hatches to leaflet
-
-makePlotURI <- function(expr, width, height, ...) {
-  pngFile <- plotPNG(function() { expr }, width = width, height = height, ...)
-  on.exit(unlink(pngFile))
-
-  base64 <- httpuv::rawToBase64(readBin(pngFile, raw(1), file.size(pngFile)))
-  paste0("data:image/png;base64,", base64)
-}
-
-
-
-
-plot1 <- makePlotURI({
-  print(ggplot(natl_PA %>% filter(priority_area == 1), aes(map_id = region)) +
-  geom_map_pattern(
-    map = states_map,
-    aes(pattern_type = priority_area),
-    pattern = 'magick',
-    pattern_fill = 'black',
-    pattern_aspect_ratio = 1.75,
-    fill = 'white',
-    color = 'black', show.legend = F) +
-  coord_map() +
-    expand_limits(x = states_map$long, y = states_map$lat) +
- scale_pattern_type_continuous(choices = c("right30", NA)) +
-  theme_map() +
-  theme(plot.background = element_rect(fill = NA, color = NA)))},
- 200, 200, bg = "transparent")
-
-plot2 <- makePlotURI({
-  print(ggplot(cars, aes(speed, dist)) + geom_point())
-}, 200, 200, bg = "transparent")
-
-df <- data.frame(
-  lat = c(40, 41),
-  lng = c(5, 7),
-  plots = c(plot1, plot2),
-  stringsAsFactors = FALSE
-)
-
-df <- data.frame(priority_areas)
-
-leaflet(df) %>% addTiles() %>%
-  addMarkers(icon = ~icons(plots))
-
-```
+# ```{r, message = F}
+# #Hatching priority areas
+# #priority.hatch <- hatched.SpatialPolygons(natl_priority_map,
+#  #                                         density = 6)
+#   #                                        angle = c(45, 135))
+# 
+# #test <- natl_priority_map %>%
+#  # subset(STATE %in% "FL")
+# 
+# #test2 <- hatched.SpatialPolygons(test)
+# 
+# 
+# natl_PA_raster <- st_rasterize(plot(st_as_sf(transf_natl_PA), density = 30))
+# 
+# 
+# natl_PA_m <- reshape2::melt(natl_PA, id = 1)
+# 
+# natl_PA_map <- st_as_sf(transf_natl_PA)
+# 
+# states_map <- map_data("state") %>%
+#   left_join(state_abbr, by = c("region" = "state_name")) 
+# 
+# natl_PA <- data.frame(transf_natl_PA) %>%
+#   mutate(state = tolower(STATE),
+#          priority_area = 1) %>%
+#   right_join(states_map, by = "state") %>%
+#   mutate(priority_area = ifelse(
+#     priority_area == 1, 1, 0
+#   ))
+# 
+# ##creating hatches for priority areas
+# priority_areas <- 
+#   ggplot(natl_PA %>% filter(priority_area == 1), aes(map_id = region)) +
+#   geom_map_pattern(
+#     map = states_map,
+#     aes(pattern_type = priority_area),
+#     pattern = 'magick',
+#     pattern_fill = 'black',
+#     pattern_aspect_ratio = 1.75,
+#     fill = 'white',
+#     color = 'black', show.legend = F) +
+#   coord_map() +
+#     expand_limits(x = states_map$long, y = states_map$lat) +
+#  scale_pattern_type_continuous(choices = c("right30", NA)) +
+#   theme_map() +
+#   theme(plot.background = element_rect(fill = NA, color = NA))
+# 
+# priority_areas
+# 
+# ## transform to enable addition of hatches to leaflet
+# 
+# makePlotURI <- function(expr, width, height, ...) {
+#   pngFile <- plotPNG(function() { expr }, width = width, height = height, ...)
+#   on.exit(unlink(pngFile))
+# 
+#   base64 <- httpuv::rawToBase64(readBin(pngFile, raw(1), file.size(pngFile)))
+#   paste0("data:image/png;base64,", base64)
+# }
+# 
+# 
+# 
+# 
+# plot1 <- makePlotURI({
+#   print(ggplot(natl_PA %>% filter(priority_area == 1), aes(map_id = region)) +
+#   geom_map_pattern(
+#     map = states_map,
+#     aes(pattern_type = priority_area),
+#     pattern = 'magick',
+#     pattern_fill = 'black',
+#     pattern_aspect_ratio = 1.75,
+#     fill = 'white',
+#     color = 'black', show.legend = F) +
+#   coord_map() +
+#     expand_limits(x = states_map$long, y = states_map$lat) +
+#  scale_pattern_type_continuous(choices = c("right30", NA)) +
+#   theme_map() +
+#   theme(plot.background = element_rect(fill = NA, color = NA)))},
+#  200, 200, bg = "transparent")
+# 
+# plot2 <- makePlotURI({
+#   print(ggplot(cars, aes(speed, dist)) + geom_point())
+# }, 200, 200, bg = "transparent")
+# 
+# df <- data.frame(
+#   lat = c(40, 41),
+#   lng = c(5, 7),
+#   plots = c(plot1, plot2),
+#   stringsAsFactors = FALSE
+# )
+# 
+# df <- data.frame(priority_areas)
+# 
+# leaflet(df) %>% addTiles() %>%
+#   addMarkers(icon = ~icons(plots))
+# 
+# ```
 
 
 ## Leaflet Map in Development
@@ -397,7 +397,6 @@ nobo_and_gct_leaflet
 
 saveWidget(nobo_and_gct_leaflet, file="GCT_and_TrendNOBO.html")
   
-brewer.pal.info
 
 
 ```

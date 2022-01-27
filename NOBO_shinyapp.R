@@ -3,6 +3,7 @@ library(leaflet)
 library(leaflet.extras)
 library(tidyverse)
 library(ggmap)
+library(sf)
 
 
 # Create a googleKey.R in the same folder and register your Google Key with ggmap
@@ -11,7 +12,26 @@ library(ggmap)
 
 # Datasets ---------------------
 
-bird_df <- bird_data %>%
+temp_priority_data <- natl_priority_map %>%
+  st_as_sf() %>%
+  st_transform(crs = "WGS84")
+
+sf::sf_use_s2(F)
+
+# temp_priority_data$geometry <- temp_priority_data$geometry %>%
+#   s2::s2_rebuild() %>%
+#   sf::st_as_sfc()
+
+bird_df <- bird_data
+bird_df <- bird_df %>%
+  st_as_sf() %>%
+  st_transform(crs = "WGS84") %>%
+  st_join(y = natl_priority_map %>%
+            st_as_sf() %>%
+            st_transform(crs = "WGS84")) %>%
+  rename(priority_area = STATE) %>%
+  mutate(priority_area = case_when(is.na(priority_area) == F ~ "Priority Area",
+                                   is.na(priority_area) == T ~ "Non-Priority Area")) %>%
   as.data.frame() %>%
   mutate(STATE = substr(bird_df$strat, 4, nchar(bird_df$strat) - 3),
          REGION = ifelse(STATE %in% c("IL",
@@ -28,11 +48,26 @@ bird_df <- bird_data %>%
                                       "OH",
                                       "WV"), "Northeast", "Southeast")))
 
-gct_columns <- as.data.frame(colnames(GCT_and_Geographies))
-gct_columns
+# gct_columns <- as.data.frame(colnames(GCT_and_Geographies))
+# gct_columns
+# 
+# GCT_and_Geographies_clean <- GCT_and_Geographies %>%
+#   mutate()
 
-GCT_and_Geographies_clean <- GCT_and_Geographies %>%
-  mutate()
+
+# create table of summary stats between priority and non-priority areas
+bird_stats <- cbind(rbind("Non-Priority","Priority"),
+                    rbind(bird_df %>%
+                            group_by(priority_area) %>%
+                            summarise(avg_trend = mean(trend),
+                                      med_trend = median(trend),
+                                      avg_abund = mean(abund),
+                                      med_abund = median(abund),
+                                      avg_prec_i = mean(prec_i),
+                                      med_prec_i = median(prec_i)))
+                    )
+
+
 
 # Functions -------------------
 
@@ -45,6 +80,7 @@ depth_plot <- function(var_x, var_y, var_z = "REGION") {
                    color = .data[[var_z]],
                    fill = .data[[var_z]]),
                alpha = 0.3, size = 3, shape = "circle") +
+    # geom_boxplot(aes(.data[[var_x]], .data[[var_y]])) +
     coord_flip() +
     # labs(x = "", y = y_axis_lab, subtitle = subtitle) +
     theme(
@@ -52,14 +88,21 @@ depth_plot <- function(var_x, var_y, var_z = "REGION") {
       axis.title = element_text(size = 16),
       axis.text.x = element_text(family = "Trebuchet MS", size = 12),
       panel.grid = element_blank())
+      # labs( x = NULL, y = var_y))
 }
 
+GCT_and_Geographies_df <- as.data.frame(GCT_and_Geographies)
+
 state_plot <- function(var_x, var_y, var_z = "REGION") {
-  ggplot(GCT_and_Geographies) + 
+  ggplot(GCT_and_Geographies_df) + 
     geom_col(aes(x = reorder(.data[[var_x]], 
                              -as.numeric(as.character(.data[[var_y]]))), 
                  y = as.numeric(as.character(.data[[var_y]])), 
-                 fill = .data[[var_z]]))
+                 fill = .data[[var_z]]),
+             # labs(x = NULL, y = var_y),
+             # theme(
+             #   axis.text.x = element_text(family = "Trebuchet MS", size = 12, angle = 90)
+             )
 }
 
 state_plot("STATE", "ACRE_PRO_SUPP")
@@ -112,27 +155,6 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
     options = layersControlOptions(collapsed = T)
   ) %>% 
   
-  #Add State Data 
-  addPolygons(data=GCT_and_Geographies,
-              highlightOptions = highlightOptions(fillColor="green", fillOpacity=.3),
-              weight=1, 
-              fillColor= "white",
-              color = "black",
-              fillOpacity=.05,
-              popup = paste0(GCT_and_Geographies$STATE, " - ", GCT_and_Geographies$REGION), 
-              group="States",
-              labelOptions = labelOptions(
-                style = list("font-weight" = "normal", padding = "3px 8px"),
-                textsize = "11px",
-                direction = "auto")) %>% 
-  
-  addPolygons(data=transf_natl_PA, 
-              color="Black",
-              fillColor = "mediumpurple2", 
-              highlightOptions = highlightOptions(fillColor = "red", fillOpacity = .7),
-              opacity = .5,
-              weight =1,
-              group="Priority Counties")%>%
   
   #set Max Bounds
   setMaxBounds(lng1=-140.791110603, 
@@ -154,11 +176,13 @@ ui <- fluidPage(
     navbarPage("Plots",
                tabPanel("Bird Data",
                  selectInput("select", label = h5("Continuous Variable"),
-                             choices = colnames(bird_df)),
+                             choices = colnames(bird_df),
+                             selected = "trend"),
                  plotOutput("Plot")),
                tabPanel("State Data",
                         selectInput("stateselect", label = h5("Continuous Variable"),
-                                    choices = colnames(GCT_and_Geographies)),
+                                    choices = colnames(GCT_and_Geographies), 
+                                    selected = "ACRE_PRO_SUPP"),
                         plotOutput("statePlot"))
     )),
   # absolutePanel(
@@ -193,7 +217,7 @@ server <- function(input, output, session) {
                                     subset(select = "label")) - 2))
     HTML(x)
     })
-  output$Plot <- renderPlot(depth_plot("STATE", input$select))
+  output$Plot <- renderPlot(depth_plot("priority_area", input$select))
   output$statePlot <- renderPlot(state_plot("STATE", input$stateselect))
     output$map <- renderLeaflet({
     nobo_and_gct_leaflet
@@ -209,6 +233,35 @@ server <- function(input, output, session) {
                              round(bird_dat$abund), sep = ""), 
                  popup=~label, 
                  group="Points") %>%
+        
+        #Add State Data 
+        clearShapes() %>%
+        addPolygons(data=GCT_and_Geographies,
+                    highlightOptions = highlightOptions(fillColor="green", fillOpacity=.3),
+                    weight=1, 
+                    fillColor= "white",
+                    color = "black",
+                    fillOpacity=.05,
+                    popup = paste0(GCT_and_Geographies$STATE, " - ", GCT_and_Geographies$REGION), 
+                    group="States",
+                    labelOptions = labelOptions(
+                      style = list("font-weight" = "normal", padding = "3px 8px"),
+                      textsize = "11px",
+                      direction = "auto")) %>% 
+        addPolygons(data = GCT_and_Geographies %>% filter(STATE == {input$state}),
+                    fillColor = "purple",
+                    fillOpacity = .3,
+                    popup = paste0({input$state})
+                    ) %>%
+        addPolygons(data=transf_natl_PA, 
+                    color="Black",
+                    fillColor = "mediumpurple2", 
+                    highlightOptions = highlightOptions(fillColor = "red", fillOpacity = .7),
+                    popup = "Priority Area",
+                    opacity = .5,
+                    weight =1,
+                    group="Priority Counties")%>%
+        
         addLegendSize(values = bird_dat$abund,
                       color = "black",
                       fillColor = "black",
@@ -257,6 +310,12 @@ server <- function(input, output, session) {
 ## Run App -----------
 
 shinyApp(ui, server)
+
+
+ggplot(bird_df[which(bird_df$priority_area == "Priority Area"),]) +
+  geom_histogram(aes(x = trend), bins = 100) +
+  geom_histogram(data = bird_df[which(bird_df$priority_area == "Non-Priority Area"),],
+                 aes(x = trend), fill = "green", bins = 100)
 
 
 
