@@ -1,0 +1,14 @@
+name: USDA_WLFW_NOBO
+title: USDA_WLFW_NOBO
+username:
+account: landscape-partnership
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5527528
+bundleId: 5518974
+url: https://landscape-partnership.shinyapps.io/usda_wlfw_nobo/
+when: 1643390001.37687
+lastSyncTime: 1643390001.37687
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: Archive Data Sets/GCT_DATAONLY.csv|Archive Data Sets/GCT_DATAONLY.xlsm|Archive Data Sets/GCT_DATAONLY_SUMS.csv|Archive Data Sets/GCT_DATASET_NOBO_GSP.csv|Archive Data Sets/NOBOData_FORLEAFLET.csv|Archive Tutorial R/LessonsFromCodeMentor_Leaflet.R|MBTA_ridership_red.RData|Merged_CSVandGeoJSON.json|Archive Versions Leaflet|Leaflet_and_Figures_WLFW

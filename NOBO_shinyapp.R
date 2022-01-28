@@ -1,3 +1,9 @@
+
+
+# Create a googleKey.R in the same folder and register your Google Key with ggmap
+#source('C:/Users/mwill/OneDrive - Harvard University/2022 - Winter/RShiny/Day05/Scripts/ggmap_demo.R')
+
+### Loading Libraries
 library(shiny)
 library(leaflet)
 library(leaflet.extras)
@@ -5,9 +11,129 @@ library(tidyverse)
 library(ggmap)
 library(sf)
 
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(leaflegend)
+library(htmltools)
+library(htmlwidgets)
+library(raster)
+library(gstat)
+library(spatial)
+library(dplyr)
+library(jsonlite)
+library(ggplot2)
+library(hrbrthemes)
+library(ggthemes)
+library(rgdal)
+library(RColorBrewer)
+library(HatchedPolygons)
+library(ggspatial)
+library(stars)
+library(ggpattern)
+library(maps)
+library(mapproj)
 
-# Create a googleKey.R in the same folder and register your Google Key with ggmap
-#source('C:/Users/mwill/OneDrive - Harvard University/2022 - Winter/RShiny/Day05/Scripts/ggmap_demo.R')
+
+
+options(scipen=999)
+
+# setwd("~/USDA_WLFW_NOBO")
+
+
+### Loading Variable Sets
+
+
+
+##Loading Boundaries
+State_Boundaries <- st_read("cb_2018_us_state_500k.kml", quiet = TRUE)
+State_Boundaries_GJSON <- st_read("US_State_Boundaries.json", quiet = TRUE)
+State_Boundaries_Zip <- st_read("StateBoundariesZIP", quiet = T)
+
+
+#loading counties
+natl_priority_map<-readOGR("NOBO_Boundary_Aug2021_Dissolve_ST_Draft", layer="NOBO_Boundary_Aug2021_Dissolve_ST_Draft")
+
+
+##Loading Goal Collection (GCT) Data
+GCT_data <- read_csv("NOBODATA_ForLeaflet_Final.csv")
+
+
+##Loading BIRD DATA RDS
+bird_data <- readRDS("NOBO_route_level_trends.rds")
+
+bird_data<-as(bird_data, "Spatial")  #this converts the object, bird_data, into a SpatialPointsDataFrame
+
+
+
+## Converting Projection
+bird_dat<-spTransform(bird_data, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+
+
+transf_natl_PA <- spTransform(natl_priority_map, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+
+
+##Joining Boundaries and GCT Data
+GCT_and_Geographies <- st_as_sf(left_join(GCT_data, State_Boundaries_Zip, by =c("STATE" ="NAME")))
+
+#read state abbr for later mapping
+state_abbr <- data.frame(tolower(state.abb) %>%
+                           cbind(tolower(state.name)))
+
+colnames(state_abbr) <- c("state","state_name")
+
+
+
+
+
+
+
+### Creating Labels for GCT Data + Bird Data
+
+
+## Creating Label for States
+GCT_and_Geographies$label <- 
+  paste("<b>", "<big>", GCT_and_Geographies$STATE,"</b>", "</big>",
+        "<br><i>", GCT_and_Geographies$REGION, "</i>",
+        "<br>", "Values shown below reflect the combined value of", "<br>", "Original Program Goals and Framework Goals",
+        "<br>",
+        "<br>",
+        "<b style='font-size:90%'> Top 3 Core Conservation Practices: </b>",
+        "<br>",
+        GCT_and_Geographies$TOP3CORE,
+        "<br>",
+        "<br>",
+        "<b style='font-size:90%'>", "Financial Assistance:", "</b>","<br>",
+        "$ ", prettyNum(GCT_and_Geographies$REQFIN_FRAME,big.mark=","),
+        "<br>",
+        "<br>",  "<b style='font-size:90%'>", "Total CP Coverage, Acres:", "</b>",
+        "<br>", "Core:", prettyNum(GCT_and_Geographies$ACRE_FRAME_CORE, big.mark = ","),
+        "<br>", "Supplemental:", prettyNum(GCT_and_Geographies$ACRE_FRAME_SUPP, big.mark = ","),
+        "<br>", "Core and Supp Combined:", prettyNum(GCT_and_Geographies$ACRE_FRAME_CAS, big.mark = ","),
+        "<br>",
+        "<br>", "<b style='font-size:90%'>", "Total CP Coverage, Feet:", "</b>",
+        "<br>", "Core:", prettyNum(GCT_and_Geographies$FT_FRAME_CORE, big.mark = ","),
+        "<br>", "Supplemental:", prettyNum(GCT_and_Geographies$FT_FRAME_SUPP, big.mark = ","),
+        "<br>", "Core and Supp Combined:", GCT_and_Geographies$FT_FRAME_CAS,
+        "<br>",
+        "<br>", "<b style='font-size:90%'>", "Total CP Coverage, Number of X:", "</b>",
+        "<br>",GCT_and_Geographies$X_FRAME,
+        "<br>",
+        "<br>", "<b style='font-size:90%'>", "Number of Written Plans:", "</b>",
+        "<br>",GCT_and_Geographies$WRITTEN_FRAME,
+        "<br>",
+        "<br>", "<b style='font-size:90%'>", "Number of Applied Plans:", "</b>",
+        "<br>",GCT_and_Geographies$APPLIED_FRAME) %>% 
+  lapply(htmltools::HTML)
+
+
+
+# Creating Label for NOBO Trend Data
+bird_dat$label <- 
+  paste("NOBO Trend Data","<br>", "Abundance:", round(bird_dat$abund, digits=3),"<br>","Trend:", round(bird_dat$trend, digits=3),"</b>")%>%
+  lapply(htmltools::HTML)
+
+
 
 
 # Datasets ---------------------
@@ -146,6 +272,12 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
                    tileOptions(opacity = .6)) %>% 
   addProviderTiles(providers$Stamen, group = "Map", 
                    options = tileOptions(opacity = .5)) %>%
+
+  #set Max Bounds
+  setMaxBounds(lng1=-140.791110603, 
+               lat1= 15,
+               lng2= -55.96466,
+               lat2= 81.3577635769) %>%
   
   #create layer toggle  
   addLayersControl(
@@ -153,15 +285,7 @@ nobo_and_gct_leaflet <- leaflet(options=leafletOptions(minZoom = 4)) %>%
     overlayGroups = c("Points", "States", "Priority Counties"), 
     position = "topleft", 
     options = layersControlOptions(collapsed = T)
-  ) %>% 
-  
-  
-  #set Max Bounds
-  setMaxBounds(lng1=-140.791110603, 
-               lat1= 10,
-               lng2= -40.96466,
-               lat2= 81.3577635769)
-
+  ) 
 
 # Shiny App ----------------------------
 ## UI ---------
@@ -192,10 +316,10 @@ ui <- fluidPage(
   #               choices = colnames(bird_df))
   # ),
   sidebarPanel(
-    textInput('address', 'Enter address'),
-    actionButton('search', 'Search'),
-    textOutput('result1'),
-    textOutput('result2'),
+    # textInput('address', 'Enter address'),
+    # actionButton('search', 'Search'),
+    # textOutput('result1'),
+    # textOutput('result2'),
     selectInput("state", label = h5("Select State"),
                 choices = GCT_and_Geographies$STATE),
     htmlOutput("goals")
@@ -260,7 +384,7 @@ server <- function(input, output, session) {
                     popup = "Priority Area",
                     opacity = .5,
                     weight =1,
-                    group="Priority Counties")%>%
+                    group="Priority Counties") %>% 
         
         addLegendSize(values = bird_dat$abund,
                       color = "black",
@@ -277,33 +401,33 @@ server <- function(input, output, session) {
         
     })
     
-    latlon <- reactive({
-      input$search
-      geocode(isolate(input$address),
-              output = "latlona", # this returns a list of 3: latitude, longitude, and address
-              source = "google")
-    })
+    # latlon <- reactive({
+    #   input$search
+    #   geocode(isolate(input$address),
+    #           output = "latlona", # this returns a list of 3: latitude, longitude, and address
+    #           source = "google")
+    # })
     
-    output$result1 <- renderText({
-      if (!is.na(latlon())) {
-        paste('Address:', latlon()$address)
-      } else {
-        ''
-      }
-    })
+    # output$result1 <- renderText({
+    #   if (!is.na(latlon())) {
+    #     paste('Address:', latlon()$address)
+    #   } else {
+    #     ''
+    #   }
+    # })
+    # 
+    # output$result2 <- renderText({
+    #   if (!is.na(latlon())) {
+    #     paste('Coordinates:', latlon()$lon, latlon()$lat)
+    #   } else {
+    #     ''
+    #   }
+    # })
     
-    output$result2 <- renderText({
-      if (!is.na(latlon())) {
-        paste('Coordinates:', latlon()$lon, latlon()$lat)
-      } else {
-        ''
-      }
-    })
-    
-    observe({
-      leafletProxy("map", data = latlon()) %>%
-        addMarkers()
-    })
+    # observe({
+    #   leafletProxy("map", data = latlon()) %>%
+    #     addMarkers()
+    # })
 }
 
 
@@ -311,14 +435,12 @@ server <- function(input, output, session) {
 
 shinyApp(ui, server)
 
-
-ggplot(bird_df[which(bird_df$priority_area == "Priority Area"),]) +
-  geom_histogram(aes(x = trend), bins = 100) +
-  geom_histogram(data = bird_df[which(bird_df$priority_area == "Non-Priority Area"),],
-                 aes(x = trend), fill = "green", bins = 100)
+NOBO_App <- shinyApp(ui, server)
 
 
 
-
+# ## Deploy App --------------
+# library(rsconnect)
+# rsconnect::deployApp()
 
 
